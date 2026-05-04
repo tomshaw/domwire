@@ -1,5 +1,11 @@
 # domwire
 
+[![CI](https://github.com/tomshaw/domwire/actions/workflows/ci.yml/badge.svg)](https://github.com/tomshaw/domwire/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/domwire.svg)](https://www.npmjs.com/package/domwire)
+[![bundle size](https://img.shields.io/bundlephobia/minzip/domwire?label=minzipped)](https://bundlephobia.com/package/domwire)
+[![types](https://img.shields.io/npm/types/domwire.svg)](https://www.npmjs.com/package/domwire)
+[![license](https://img.shields.io/npm/l/domwire.svg)](./LICENSE)
+
 DOM-driven, on-demand component loader. Initialize JavaScript classes utilizing simple DOM attributes.
 
 Zero runtime dependencies. ~2 KB minified. Works in any browser app — no framework required.
