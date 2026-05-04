@@ -1,0 +1,46 @@
+{
+    "name": "domwire",
+    "version": "0.1.0",
+    "description": "DOM-driven, on-demand component loader. Initialize JavaScript classes utilizing simple DOM attributes.",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "sideEffects": false,
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        },
+        "./alpine": {
+            "types": "./dist/alpine.d.ts",
+            "import": "./dist/alpine.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "typecheck": "tsc --noEmit",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "prepublishOnly": "npm run build"
+    },
+    "devDependencies": {
+        "happy-dom": "^20.9.0",
+        "tsup": "^8.3.0",
+        "typescript": "^5.6.0",
+        "vitest": "^4.1.5"
+    },
+    "keywords": [
+        "component",
+        "manager",
+        "dom",
+        "lifecycle",
+        "lazy-load",
+        "on-demand",
+        "data-component"
+    ],
+    "license": "MIT"
+}
