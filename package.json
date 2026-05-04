@@ -1,6 +1,6 @@
 {
     "name": "domwire",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "DOM-driven, on-demand component loader. Initialize JavaScript classes utilizing simple DOM attributes.",
     "type": "module",
     "main": "./dist/index.js",
