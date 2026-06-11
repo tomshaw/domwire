@@ -116,6 +116,58 @@ describe("ComponentManager.boot", () => {
         expect(onMissing).toHaveBeenCalledWith("ghost", expect.any(HTMLElement));
     });
 
+    it("does not double-initialize an element submitted twice while its import is pending", async () => {
+        document.body.innerHTML = `<div data-component="recorder"></div>`;
+        let resolveImport!: (m: { default: typeof Recorder }) => void;
+        const importer = vi.fn(
+            () =>
+                new Promise<{ default: typeof Recorder }>((r) => {
+                    resolveImport = r;
+                }),
+        );
+        const manager = new ComponentManager({
+            registry: { Recorder: importer },
+        });
+        const el = document.querySelector("div") as HTMLElement;
+
+        const first = manager.initializeComponent(el);
+        const second = manager.initializeComponent(el);
+        resolveImport({ default: Recorder });
+        await Promise.all([first, second]);
+
+        expect(calls).toEqual([
+            "beforeCreate",
+            "created",
+            "beforeMount",
+            "mounted",
+        ]);
+        expect(manager.instances.size).toBe(1);
+    });
+
+    it("calls onError (not onMissing) when the importer fails", async () => {
+        document.body.innerHTML = `<div data-component="broken"></div>`;
+        const onError = vi.fn();
+        const onMissing = vi.fn();
+        const manager = new ComponentManager({
+            registry: {
+                Broken: async () => {
+                    throw new Error("chunk load failed");
+                },
+            },
+            onError,
+            onMissing,
+        });
+
+        await manager.boot();
+
+        expect(onError).toHaveBeenCalledWith(
+            "broken",
+            expect.any(Error),
+            expect.any(HTMLElement),
+        );
+        expect(onMissing).not.toHaveBeenCalled();
+    });
+
     it("calls onError when component constructor throws", async () => {
         document.body.innerHTML = `<div data-component="throws"></div>`;
         const onError = vi.fn();
@@ -268,6 +320,63 @@ describe("ComponentManager.observe", () => {
 
         expect(calls).toEqual(["beforeDestroy", "destroy"]);
         expect(manager.instances.has(inner)).toBe(false);
+        manager.unobserve();
+    });
+
+    it("does not mount a component whose element was removed while its import was pending", async () => {
+        let resolveImport!: (m: { default: typeof Recorder }) => void;
+        const manager = new ComponentManager({
+            registry: {
+                Recorder: () =>
+                    new Promise<{ default: typeof Recorder }>((r) => {
+                        resolveImport = r;
+                    }),
+            },
+        });
+        await manager.boot();
+        manager.observe();
+
+        const el = document.createElement("div");
+        el.dataset.component = "recorder";
+        document.body.appendChild(el);
+        await flush();
+        await flush();
+
+        el.remove();
+        await flush();
+        await flush();
+
+        resolveImport({ default: Recorder });
+        await flush();
+
+        expect(calls).toEqual([]);
+        expect(el._component).toBeUndefined();
+        expect(manager.instances.size).toBe(0);
+        manager.unobserve();
+    });
+
+    it("keeps the instance when a node is moved within the document", async () => {
+        document.body.innerHTML = `
+            <section id="a"><div data-component="recorder"></div></section>
+            <section id="b"></section>
+        `;
+        const manager = new ComponentManager({
+            registry: { Recorder: async () => ({ default: Recorder }) },
+        });
+        await manager.boot();
+        manager.observe();
+
+        const el = document.querySelector("[data-component]") as HTMLElement;
+        const instance = el._component;
+        calls.length = 0;
+
+        (document.querySelector("#b") as HTMLElement).appendChild(el);
+        await flush();
+        await flush();
+
+        expect(calls).toEqual([]);
+        expect(el._component).toBe(instance);
+        expect(manager.instances.get(el)).toBe(instance);
         manager.unobserve();
     });
 

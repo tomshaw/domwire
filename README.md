@@ -50,8 +50,8 @@ The registry key is the PascalCase form of the `data-component` value (`user-car
 new ComponentManager({
     selector: "[data-component]",      // default
     registry: { ... },                 // name → () => import(...)
-    onMissing: (name, el) => { ... },  // unknown component
-    onError:   (name, err, el) => { ... },
+    onMissing: (name, el) => { ... },  // name has no registry entry
+    onError:   (name, err, el) => { ... },  // import or constructor failed
 });
 ```
 

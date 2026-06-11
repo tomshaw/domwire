@@ -18,6 +18,11 @@ function toPascalCase(str: string): string {
 export default class ComponentLoader {
     constructor(private readonly registry: ComponentRegistry) {}
 
+    /**
+     * Resolves a component name to its constructor. Returns `null` when the
+     * name has no registry entry; rejects when the importer itself fails, so
+     * callers can tell a missing component from a failed import.
+     */
     async load(
         name: string,
         namespace: string | null = null,
@@ -29,12 +34,7 @@ export default class ComponentLoader {
         const importer = this.registry[key];
         if (!importer) return null;
 
-        try {
-            const module = await importer();
-            return module.default;
-        } catch (err) {
-            console.error(`[domwire] Failed to import "${key}":`, err);
-            return null;
-        }
+        const module = await importer();
+        return module.default;
     }
 }

@@ -43,18 +43,13 @@ describe("ComponentLoader", () => {
         expect(await loader.load("nope")).toBeNull();
     });
 
-    it("returns null and logs when importer throws", async () => {
-        const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    it("rejects when the importer throws, so failures are distinguishable from missing entries", async () => {
         const loader = new ComponentLoader({
             Bad: async () => {
                 throw new Error("boom");
             },
         });
 
-        const result = await loader.load("bad");
-
-        expect(result).toBeNull();
-        expect(errSpy).toHaveBeenCalled();
-        errSpy.mockRestore();
+        await expect(loader.load("bad")).rejects.toThrow("boom");
     });
 });

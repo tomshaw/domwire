@@ -36,6 +36,7 @@ export default class ComponentManager {
         el: HTMLElement,
     ) => void;
     private observer: MutationObserver | null = null;
+    private pending: Map<HTMLElement, Promise<void>> = new Map();
 
     constructor(options: ComponentManagerOptions = {}) {
         this.selector = options.selector ?? "[data-component]";
@@ -74,6 +75,9 @@ export default class ComponentManager {
                 });
                 m.removedNodes.forEach((node) => {
                     if (!(node instanceof HTMLElement)) return;
+                    // A node that is back in the document by the time this
+                    // callback runs was moved, not removed — keep its instance.
+                    if (node.isConnected) return;
                     if (this.instances.has(node)) this.destroyComponent(node);
                     node.querySelectorAll<HTMLElement>(this.selector).forEach(
                         (el) => {
@@ -94,21 +98,42 @@ export default class ComponentManager {
         this.observer = null;
     }
 
-    async initializeComponent(el: HTMLElement): Promise<void> {
-        if (this.instances.has(el)) return;
+    initializeComponent(el: HTMLElement): Promise<void> {
+        if (this.instances.has(el)) return Promise.resolve();
+
+        const pending = this.pending.get(el);
+        if (pending) return pending;
 
         const name = el.dataset.component;
-        if (!name) return;
+        if (!name) return Promise.resolve();
 
+        const promise = this.doInitialize(el, name).finally(() => {
+            this.pending.delete(el);
+        });
+        this.pending.set(el, promise);
+        return promise;
+    }
+
+    private async doInitialize(el: HTMLElement, name: string): Promise<void> {
         const options = parseOptions(el);
         const namespace =
             typeof options.namespace === "string" ? options.namespace : null;
 
-        const ComponentClass = await this.loader.load(name, namespace);
+        let ComponentClass;
+        try {
+            ComponentClass = await this.loader.load(name, namespace);
+        } catch (err) {
+            this.onError(name, err, el);
+            return;
+        }
         if (!ComponentClass) {
             this.onMissing(name, el);
             return;
         }
+
+        // The element may have left the DOM while its module loaded; mounting
+        // it now would leak, since its removal has already been processed.
+        if (this.observer && !el.isConnected) return;
 
         try {
             const instance = new ComponentClass(el, options);
